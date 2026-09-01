@@ -24,7 +24,7 @@ jobs:
           fetch-depth: 0
           ref: master
 
-      - name: Fast-forward master from upstream
+      - name: Sync master from upstream
         env:
           UPSTREAM_REPOSITORY: https://github.com/hehonghui/awesome-english-ebooks.git
         run: |
@@ -37,13 +37,16 @@ jobs:
           upstream_master="$(git rev-parse refs/remotes/upstream/master)"
 
           if git merge-base --is-ancestor "$upstream_master" "$fork_master"; then
-            echo "Fork master is already up to date or contains custom commits; nothing to sync."
+            echo "Fork master already contains upstream/master; nothing to sync."
             exit 0
           fi
 
-          if ! git merge-base --is-ancestor "$fork_master" "$upstream_master"; then
-            echo "Fork master and upstream/master have diverged; refusing to overwrite fork history."
-            exit 1
+          if git merge-base --is-ancestor "$fork_master" "$upstream_master"; then
+            echo "Fast-forwarding fork master to upstream/master."
+            git push origin "$upstream_master:refs/heads/master"
+            exit 0
           fi
 
-          git push origin "$upstream_master:refs/heads/master"
+          echo "Fork master contains local commits; merging upstream/master without rewriting history."
+          git merge --no-edit --no-ff "$upstream_master"
+          git push origin "HEAD:refs/heads/master"
