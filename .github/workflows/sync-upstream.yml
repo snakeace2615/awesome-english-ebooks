@@ -1,0 +1,49 @@
+name: Sync upstream
+
+on:
+  schedule:
+    # Check for upstream updates every day at 02:00 UTC.
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: sync-upstream
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out fork
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: master
+
+      - name: Fast-forward master from upstream
+        env:
+          UPSTREAM_REPOSITORY: https://github.com/hehonghui/awesome-english-ebooks.git
+        run: |
+          set -eu
+
+          git remote add upstream "$UPSTREAM_REPOSITORY"
+          git fetch --no-tags upstream master
+
+          fork_master="$(git rev-parse HEAD)"
+          upstream_master="$(git rev-parse refs/remotes/upstream/master)"
+
+          if git merge-base --is-ancestor "$upstream_master" "$fork_master"; then
+            echo "Fork master is already up to date or contains custom commits; nothing to sync."
+            exit 0
+          fi
+
+          if ! git merge-base --is-ancestor "$fork_master" "$upstream_master"; then
+            echo "Fork master and upstream/master have diverged; refusing to overwrite fork history."
+            exit 1
+          fi
+
+          git push origin "$upstream_master:refs/heads/master"
