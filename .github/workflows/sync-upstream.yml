@@ -48,5 +48,7 @@ jobs:
           fi
 
           echo "Fork master contains local commits; merging upstream/master without rewriting history."
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git merge --no-edit --no-ff "$upstream_master"
           git push origin "HEAD:refs/heads/master"
